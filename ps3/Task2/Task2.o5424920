@@ -1,0 +1,18 @@
+/lustre/home/client/fas/cpsc424/kd538
+/lustre/home/client/fas/cpsc424/kd538/kd538_ps3_cpsc424/Task2
+compute-32-10
+compute-32-10
+compute-32-7
+compute-32-7
+compute-32-6
+compute-32-6
+compute-32-5
+compute-32-5
+rm -f task2 *.o
+mpicc -g -O3 -xHost -fno-alias -std=c99 -c task2.c
+mpicc -o task2 -g -O3 -xHost -fno-alias -std=c99 task2.o
+ 8000	   2.4479	  37.0018
+
+real	0m44.633s
+user	1m21.187s
+sys	0m1.382s

@@ -1,0 +1,36 @@
+/lustre/home/client/fas/cpsc424/kd538
+/lustre/home/client/fas/cpsc424/kd538/kd538_ps3_cpsc424/Task3
+compute-34-9
+compute-34-9
+compute-34-9
+compute-34-9
+compute-34-9
+compute-34-9
+compute-34-9
+compute-34-9
+rm -f task3 *.o
+mpicc -g -O3 -xHost -fno-alias -std=c99 -c task3.c
+mpicc -o task3 -g -O3 -xHost -fno-alias -std=c99 task3.o
+Matrix multiplication times (secs):
+N	Compute	     Communicate
+-----	-------------	-------------
+ 1000	   0.0624	   0.0722
+
+real	0m0.666s
+user	0m0.413s
+sys	0m0.206s
+ 2000	   0.5971	   0.9726
+
+real	0m2.079s
+user	0m3.401s
+sys	0m0.224s
+ 4000	   1.8127	  12.2912
+
+real	0m14.974s
+user	0m58.094s
+sys	0m0.579s
+ 8000	   6.0485	  79.5548
+
+real	1m28.106s
+user	11m1.157s
+sys	0m2.963s

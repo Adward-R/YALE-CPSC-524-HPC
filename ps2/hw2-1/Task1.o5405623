@@ -1,0 +1,39 @@
+/lustre/home/client/fas/cpsc424/kd538
+/lustre/home/client/fas/cpsc424/kd538/hw2-1
+compute-32-14
+compute-32-14
+compute-32-13
+compute-32-13
+Message printed by master: Total elapsed time is 0.000352 seconds.
+From process 2: I worked for 4 seconds after receiving the following message:
+	 Hello, from process 0.
+From process 3: I worked for 8 seconds after receiving the following message:
+	 Hello, from process 0.
+From process 1: I worked for 12 seconds after receiving the following message:
+	 Hello, from process 0.
+
+real	0m16.435s
+user	0m2.155s
+sys	0m0.219s
+Message printed by master: Total elapsed time is 0.000056 seconds.
+From process 3: I worked for 4 seconds after receiving the following message:
+	 Hello, from process 0.
+From process 2: I worked for 8 seconds after receiving the following message:
+	 Hello, from process 0.
+From process 1: I worked for 12 seconds after receiving the following message:
+	 Hello, from process 0.
+
+real	0m13.424s
+user	0m2.143s
+sys	0m0.197s
+Message printed by master: Total elapsed time is 0.000053 seconds.
+From process 1: I worked for 4 seconds after receiving the following message:
+	 Hello, from process 0.
+From process 3: I worked for 8 seconds after receiving the following message:
+	 Hello, from process 0.
+From process 2: I worked for 12 seconds after receiving the following message:
+	 Hello, from process 0.
+
+real	0m13.467s
+user	0m2.258s
+sys	0m0.179s
