@@ -1,0 +1,3 @@
+The testdata?.out files have the output at the proper times for the assignment. They are outputs from a serial program using the 5 DU cutoff.
+
+The testdata?nocut.out files include output for every timestep, but without the cutoff.
