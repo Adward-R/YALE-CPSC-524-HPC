@@ -8,8 +8,10 @@
 #define MAX_N_BODY 50000
 #define TIME_INTERVAL 128
 #define G 1.0
+#define N_DIM 3
 
-void readdata(char filename[], int *N, int *K, double *DT, double *mass, double *x, double *v) {
+void readdata(char filename[], int *N, int *K, double *DT, 
+		double *mass, double (*x)[N_DIM], double (*v)[N_DIM]) {
 	FILE *fp;
 	int i;
 
@@ -20,26 +22,26 @@ void readdata(char filename[], int *N, int *K, double *DT, double *mass, double 
 	fscanf(fp, "%d", N);
 	fscanf(fp, "%d", K);
 	fscanf(fp, "%lf", DT);
-	for (i = 0; i < *N; ++ i) { fscanf(fp, "%lf", mass+i); }
-	for (i = 0; i < *N; ++ i) { fscanf(fp, "%lf %lf %lf", x+i*3, x+i*3+1, x+i*3+2); }
-	for (i = 0; i < *N; ++ i) { fscanf(fp, "%lf %lf %lf", v+i*3, v+i*3+1, v+i*3+2); }
+	for (i = 0; i < *N; ++ i) fscanf(fp, "%lf", mass+i);
+	for (i = 0; i < *N; ++ i) fscanf(fp, "%lf %lf %lf", &x[i][0], &x[i][1], &x[i][2]);
+	for (i = 0; i < *N; ++ i) fscanf(fp, "%lf %lf %lf", &v[i][0], &v[i][1], &v[i][2]);
 	fclose(fp);
 }
 
-void report(int t, int N, double DT, double mass[], double x[], double v[]) {
-	double cx[3], cv[3];
+void report(int t, int N, double DT, double mass[], double (*x)[N_DIM], double (*v)[N_DIM]) {
+	double cx[N_DIM], cv[N_DIM];
 	double msum = .0;
 	int i, k;
 
-	for (k = 0; k < 3; ++ k) cx[k] = cv[k] = .0;
+	for (k = 0; k < N_DIM; ++ k) cx[k] = cv[k] = .0;
 	for (i = 0; i < N; ++ i) {
 		msum += mass[i];
-		for (k = 0; k < 3; ++ k) {
-			cx[k] += mass[i] * x[i*3 + k];
-			cv[k] += v[i*3 + k];
+		for (k = 0; k < N_DIM; ++ k) {
+			cx[k] += mass[i] * x[i][k];
+			cv[k] += v[i][k];
 		}
 	}
-	for (k = 0; k < 3; ++ k) {
+	for (k = 0; k < N_DIM; ++ k) {
 		// printf("cx[%d] = %lf\n", k, cx[k]);
 		cx[k] /= msum;
 		cv[k] /= N;
@@ -55,11 +57,11 @@ int main(int argc, char **argv) {
 	int K;  // number of time steps
 	double DT;  // time step size
 	double mass[MAX_N_BODY];
-	double x[MAX_N_BODY][3];  // position in each dimension
-	double v[MAX_N_BODY][3];  // velocity in each dimension
-	double a[MAX_N_BODY][3];  // acceleration in each dimension
-	double F[3];  // acceleration in each dimension
-
+	double x[MAX_N_BODY][N_DIM];  // position in each dimension
+	double v[MAX_N_BODY][N_DIM];  // velocity in each dimension
+	
+	double a[N_DIM];  // acceleration in each dimension
+	double F[N_DIM];  // force in each dimension
 	int i, j, k, t;
 	double tmp, r2;
 
@@ -78,8 +80,8 @@ int main(int argc, char **argv) {
 				tmp = (G * mass[i] * mass[j]) / (r2 * sqrt(r2));  // quantative variable
 				for (k = 0; k < 3; ++ k) F[k] += tmp * (x[j][k] - x[i][k]);  // vector variable
 			}
-			for (k = 0; k < 3; ++ k) a[i][k] = F[k] / mass[k];
-			for (k = 0; k < 3; ++ k) v[i][k] += a[i][k] * (DT / 2.0);
+			for (k = 0; k < 3; ++ k) a[k] = F[k] / mass[k];
+			for (k = 0; k < 3; ++ k) v[i][k] += a[k] * (DT / 2.0);
 			for (k = 0; k < 3; ++ k) x[i][k] += v[i][k] * DT;
 		}
 	}
