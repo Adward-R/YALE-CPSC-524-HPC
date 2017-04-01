@@ -168,20 +168,35 @@ int main(int argc, char **argv) {
 	MPI_Bcast(&K, 1, MPI_INT, 0, MPI_COMM_WORLD);
 	MPI_Bcast(&DT, 1, MPI_DOUBLE, 0, MPI_COMM_WORLD);
 
+	MPI_Bcast(n_bodies, NP, MPI_INT, 0, MPI_COMM_WORLD);
+	MPI_Barrier(MPI_COMM_WORLD);
+	// for (i = 0; i < NP; ++ i) printf("%d ", n_bodies[i]);
+	// printf("\n");
 	MPI_Scatterv(bodies, n_bodies, send_displ, mpi_body_t, 
 		recvbuf, n_bodies[rank], mpi_body_t, 0, MPI_COMM_WORLD);
 
 	MPI_Barrier(MPI_COMM_WORLD);
 	memcpy(bodies, recvbuf, n_bodies[rank] * sizeof(Body));  // release recvbuf
+	
 
+	// printf("\n---Proc %d---\n", rank);
+	// 	for (i = 0; i < n_bodies[rank]; ++ i) {
+	// 		for (j = 0; j < 3; ++ j) printf("%lf ", bodies[i].x[j]);
+	// 		printf("\n----\n");
+	// 	}
+	
 
 	for (t = 0; t < K; ++ t) {
-		if (t % 5 == 0) {
+		if (t % TIME_INTERVAL == 0) {
 		// if (t % TIME_INTERVAL == 0) {
+			// printf("%lf %lf %lf\n", bodies[0].x[0], bodies[0].x[1], bodies[0].x[2]);
 			centroid = get_centroid(n_bodies[rank], bodies);
+			// printf("%lf %lf %lf\n", centroid.x[0], centroid.x[1], centroid.x[2]);
 			MPI_Gather(&centroid, 1, mpi_body_t, recvbuf, 1, mpi_body_t, 0, MPI_COMM_WORLD);
-			centroid = get_centroid(NP, recvbuf);
-			if (rank == 0) report(t, DT, &centroid, n_bodies);
+			if (rank == 0) {
+				centroid = get_centroid(NP, recvbuf);
+				report(t, DT, &centroid, n_bodies);
+			}
 		}
 
 		/* Prepare sending bodies within 5DU to other octants */
@@ -299,6 +314,8 @@ int main(int argc, char **argv) {
 		}
 		memcpy(bodies, recvbuf, i * sizeof(Body));
 		n_bodies[rank] = i;
+
+		// printf("%lf\n", bodies[0].x[0]);
 		
 		// i = j = 0;
 		// for (; i < recv_displ[NP-1] + recv_count[NP-1]; ++ i) {
@@ -318,11 +335,13 @@ int main(int argc, char **argv) {
 		// }
 
 	}
-	// report(rank, t, n_bodies[rank], DT, bodies);
+
 	centroid = get_centroid(n_bodies[rank], bodies);
 	MPI_Gather(&centroid, 1, mpi_body_t, recvbuf, 1, mpi_body_t, 0, MPI_COMM_WORLD);
-	centroid = get_centroid(NP, recvbuf);
-	if (rank == 0) report(t, DT, &centroid, n_bodies);
+	if (rank == 0) {
+		centroid = get_centroid(NP, recvbuf);
+		report(t, DT, &centroid, n_bodies);
+	}
 
 	MPI_Type_free(&mpi_body_t);
 	MPI_Finalize();
