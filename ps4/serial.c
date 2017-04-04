@@ -1,3 +1,5 @@
+/* Author: Keyang Dong, Yale University, Computer Science Dept. */
+
 #include <stdio.h>
 #include <string.h>
 #include <stddef.h> 
@@ -11,6 +13,8 @@
 #define N_DIM 3
 #define CUTOFF_SQR 25.0
 #define EPSILON 0.0001
+
+extern void timing(double* wcTime, double* cpuTime);
 
 typedef struct body_t {
 	double mass;
@@ -70,6 +74,7 @@ int main(int argc, char **argv) {
 	int N;  // number of bodies
 	int K;  // number of time steps
 	double DT;  // time step size
+	double wct, cur_t, cpu_t;
 	
 	double F[N_DIM];  // force in each dimension
 	int i, j, k, t;
@@ -78,8 +83,8 @@ int main(int argc, char **argv) {
 	Body centroid;
 
 	readdata(&N, &K, &DT, bodies);
-	// printf("%lf %lf %lf\n", bodies[0].x[0], bodies[0].x[1], bodies[0].x[2]);
 
+	timing(&wct, &cpu_t);
 	for (t = 0; t < K; ++ t) {
 		if (t % TIME_INTERVAL == 0) {
 			centroid = get_centroid(N, bodies);
@@ -95,8 +100,10 @@ int main(int argc, char **argv) {
 			}
 		}
 	}
+	timing(&cur_t, &cpu_t);
 	centroid = get_centroid(N, bodies);
 	report(t, DT, &centroid);
+	printf("\nTime for %d timesteps with %d bodies\t%lf seconds\n", K, N, cur_t - wct);
 
 	return 0;
 }
