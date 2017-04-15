@@ -4,16 +4,18 @@
 #include <omp.h>
 #include <string.h>
 
-struct BodyType { 
-  float x, y, z;
-  float vx, vy, vz; 
+#define N 16384
+
+struct BodySet { 
+  float x[N], y[N], z[N];
+  float vx[N], vy[N], vz[N]; 
 };
 
 typedef struct {
   float x, y, z;
 } Centroid;
 
-void MoveBodies(const int nBodies, struct BodyType* const bodies, const float dt) {
+void MoveBodies(const int nBodies, struct BodySet* const bodies, const float dt) {
 
   // Avoid singularity and interaction with self
   const float softening = 1e-20;
@@ -32,9 +34,9 @@ void MoveBodies(const int nBodies, struct BodyType* const bodies, const float dt
     for (j = 0; j < nBodies; j++) { 
       
       // Newton's law of universal gravity
-      const float dx = bodies[j].x - bodies[i].x;
-      const float dy = bodies[j].y - bodies[i].y;
-      const float dz = bodies[j].z - bodies[i].z;
+      const float dx = bodies->x[j] - bodies->x[i];
+      const float dy = bodies->y[j] - bodies->y[i];
+      const float dz = bodies->z[j] - bodies->z[i];
       const float drSquared  = dx*dx + dy*dy + dz*dz + softening;
       const float drReciRooted = 1.0f / sqrtf(drSquared);  // all expensive operations happened here
       const float drPower23 = drReciRooted * drReciRooted * drReciRooted;
@@ -51,27 +53,27 @@ void MoveBodies(const int nBodies, struct BodyType* const bodies, const float dt
   #pragma omp parallel for schedule(dynamic)
   for (int i = 0; i < nBodies; i++) {
     // Accelerate bodies in response to the gravitational force
-    bodies[i].vx += dt * Fx[i]; 
-    bodies[i].vy += dt * Fy[i]; 
-    bodies[i].vz += dt * Fz[i];
+    bodies->vx[i] += dt * Fx[i]; 
+    bodies->vy[i] += dt * Fy[i]; 
+    bodies->vz[i] += dt * Fz[i];
 
     // Move bodies according to their velocities
-    bodies[i].x += bodies[i].vx * dt;
-    bodies[i].y += bodies[i].vy * dt;
-    bodies[i].z += bodies[i].vz * dt;
+    bodies->x[i] += bodies->vx[i] * dt;
+    bodies->y[i] += bodies->vy[i] * dt;
+    bodies->z[i] += bodies->vz[i] * dt;
   }
 }
 
-Centroid get_centroid(const int nBodies, struct BodyType* const bodies) {
+Centroid get_centroid(const int nBodies, struct BodySet* const bodies) {
   float comx = 0.0f, comy=0.0f, comz=0.0f;
   Centroid c;
 
   #pragma omp parallel for reduction(+:comx)
-    for (int i = 0; i < nBodies; ++ i) comx += bodies[i].x;
+    for (int i = 0; i < nBodies; ++ i) comx += bodies->x[i];
   #pragma omp parallel for reduction(+:comy)
-    for (int i = 0; i < nBodies; ++ i) comy += bodies[i].y;
+    for (int i = 0; i < nBodies; ++ i) comy += bodies->y[i];
   #pragma omp parallel for reduction(+:comz)
-    for (int i = 0; i < nBodies; ++ i) comz += bodies[i].z;
+    for (int i = 0; i < nBodies; ++ i) comz += bodies->z[i];
   
   c.x = comx / nBodies;
   c.y = comy / nBodies;
@@ -82,29 +84,29 @@ Centroid get_centroid(const int nBodies, struct BodyType* const bodies) {
 int main(const int argc, const char** argv) {
   // omp_set_num_threads(8);
   // Problem size and other parameters
-  const int nBodies = (argc > 1 ? atoi(argv[1]) : 16384);
+  const int nBodies = (argc > 1 ? atoi(argv[1]) : N);
   const int nSteps = 10;  // Duration of test
   const float dt = 0.01f; // Body propagation time step
   Centroid c;
 
   // Body data stored as an Array of Structures (AoS)
-  struct BodyType bodies[nBodies];
+  struct BodySet bodies;
 
   // Initialize random number generator and bodies
   srand(0);
   float randmax;
   randmax = (float) RAND_MAX;
   for(int i = 0; i < nBodies; i++) {
-    bodies[i].x = ((float) rand())/randmax; 
-    bodies[i].y = ((float) rand())/randmax; 
-    bodies[i].z = ((float) rand())/randmax; 
-    bodies[i].vx = ((float) rand())/randmax; 
-    bodies[i].vy = ((float) rand())/randmax; 
-    bodies[i].vz = ((float) rand())/randmax; 
+    bodies.x[i] = ((float) rand())/randmax; 
+    bodies.y[i] = ((float) rand())/randmax; 
+    bodies.z[i] = ((float) rand())/randmax; 
+    bodies.vx[i] = ((float) rand())/randmax; 
+    bodies.vy[i] = ((float) rand())/randmax; 
+    bodies.vz[i] = ((float) rand())/randmax; 
   }
 
   // Compute initial center of mass  
-  c = get_centroid(nBodies, bodies);
+  c = get_centroid(nBodies, &bodies);
   printf("Initial center of mass: (%g, %g, %g)\n", c.x, c.y, c.z);
 
   // Perform benchmark
@@ -120,7 +122,7 @@ int main(const int argc, const char** argv) {
   for (int step = 1; step <= nSteps; step++) {
 
     const double tStart = omp_get_wtime(); // Start timing
-    MoveBodies(nBodies, bodies, dt);
+    MoveBodies(nBodies, &bodies, dt);
     const double tEnd = omp_get_wtime(); // End timing
 
     // These are for calculating flop rate. It ignores symmetry and 
@@ -149,7 +151,7 @@ int main(const int argc, const char** argv) {
   printf("* - warm-up, not included in average\n\n");
 
   // Compute final center of mass
-  c = get_centroid(nBodies, bodies);
+  c = get_centroid(nBodies, &bodies);
   printf("Final center of mass: (%g, %g, %g)\n", c.x, c.y, c.z);
 
 }
