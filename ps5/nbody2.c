@@ -17,44 +17,38 @@ void MoveBodies(const int nBodies, struct BodyType* const bodies, const float dt
 
   // Avoid singularity and interaction with self
   const float softening = 1e-20;
-  // Components of the gravity force on body i
-  float Fx[nBodies], Fy[nBodies], Fz[nBodies];
-  int i, j;
-
-  memset(Fx, 0, nBodies * sizeof(float));
-  memset(Fy, 0, nBodies * sizeof(float));
-  memset(Fz, 0, nBodies * sizeof(float));
   
-  #pragma omp parallel for private(i, j) schedule(dynamic)
+  #pragma omp parallel for // private(i, j) schedule(dynamic)
   // Loop over bodies that experience force
-  for (i = 0; i < nBodies; i++) {
+  for (int i = 0; i < nBodies; i++) {
+    float Fx, Fy, Fz;  // Components of the gravity force on body i
+    Fx = Fy = Fz = .0;
     // Loop over bodies that exert force: vectorization expected here
-    for (j = 0; j < nBodies; j++) { 
-      
+    for (int j = 0; j < nBodies; j++) { 
       // Newton's law of universal gravity
       const float dx = bodies[j].x - bodies[i].x;
       const float dy = bodies[j].y - bodies[i].y;
       const float dz = bodies[j].z - bodies[i].z;
       const float drSquared  = dx*dx + dy*dy + dz*dz + softening;
-      const float drReciRooted = 1.0f / sqrtf(drSquared);  // all expensive operations happened here
-      const float drPower23 = drReciRooted * drReciRooted * drReciRooted;
+      const float drRooted = sqrtf(drSquared);
+      const float drPower32 = drRooted * drSquared;
+      const float drPower23 = 1.0f / drPower32;
 	
       // Calculate the net force
-      Fx[i] += dx * drPower23;  
-      Fy[i] += dy * drPower23;  
-      Fz[i] += dz * drPower23;
+      Fx += dx * drPower23;  
+      Fy += dy * drPower23;  
+      Fz += dz * drPower23;
     }
+    // Accelerate bodies in response to the gravitational force
+    bodies[i].vx += dt * Fx; 
+    bodies[i].vy += dt * Fy; 
+    bodies[i].vz += dt * Fz;
   }
   // end of parallel section
   #pragma omp barrier
 
   #pragma omp parallel for schedule(dynamic)
   for (int i = 0; i < nBodies; i++) {
-    // Accelerate bodies in response to the gravitational force
-    bodies[i].vx += dt * Fx[i]; 
-    bodies[i].vy += dt * Fy[i]; 
-    bodies[i].vz += dt * Fz[i];
-
     // Move bodies according to their velocities
     bodies[i].x += bodies[i].vx * dt;
     bodies[i].y += bodies[i].vy * dt;

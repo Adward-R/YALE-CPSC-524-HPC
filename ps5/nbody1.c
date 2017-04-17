@@ -28,14 +28,13 @@ void MoveBodies(const int nBodies, struct BodyType* const bodies, const float dt
       const float dz = bodies[j].z - bodies[i].z;
       const float drSquared  = dx*dx + dy*dy + dz*dz + softening;
       const float drRooted = sqrtf(drSquared);
-      const float drReciRooted = 1.0f / drRooted;  // all expensive operations happened here
-      const float drPower23  = drReciRooted * drReciRooted * drReciRooted;
+      const float drPower32 = drRooted * drSquared;
+      const float drPower23 = 1.0f / drPower32;
 	
       // Calculate the net force
       Fx += dx * drPower23;  
       Fy += dy * drPower23;  
       Fz += dz * drPower23;
-
     }
 
     // Accelerate bodies in response to the gravitational force

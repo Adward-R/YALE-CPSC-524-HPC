@@ -1,12 +1,12 @@
 CC = icpc
 
 CFLAGS= -g -O3 -xHost -mkl -fno-alias -qopenmp
-#CFLAGS= -g -O0 -xHost -mkl -fno-alias -qopenmp
+# CFLAGS= -g -O0 -xHost -mkl -fno-alias -qopenmp
 
 OPTFLAGS = -qopt-report -qopt-report-file=$@.optrpt 
 
-TARGETS = nbody2
-TARGETOBJECTS = nbody2.o
+TARGETS = nbody0
+TARGETOBJECTS = nbody0.o
 
 NSIZE=16384
 

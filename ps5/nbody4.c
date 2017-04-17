@@ -5,6 +5,8 @@
 #include <string.h>
 
 #define N 32768
+#define TILE_SZ 2
+#define N_THREADS 8
 
 struct BodySet { 
   float x[N], y[N], z[N];
@@ -16,36 +18,44 @@ typedef struct {
 } Centroid;
 
 void MoveBodies(const int nBodies, struct BodySet* const bodies, const float dt) {
-  omp_set_num_threads(8);
+
   // Avoid singularity and interaction with self
   const float softening = 1e-20;
   
-  #pragma omp parallel for // private(i, j, dx, dy, dz, drSquared, drReciRooted, drPower23) schedule(dynamic)
+  omp_set_num_threads(N_THREADS);
+  #pragma omp parallel for // private(i, j, k) schedule(dynamic)
   // Loop over bodies that experience force
-  for (int i = 0; i < nBodies; i++) {
-    float Fx, Fy, Fz;  // Components of the gravity force on body i
-    Fx = Fy = Fz = .0;
-    // Loop over bodies that exert force: vectorization expected here
-    for (int j = 0; j < nBodies; j++) { 
-      // Newton's law of universal gravity
-      const float dx = bodies->x[j] - bodies->x[i];
-      const float dy = bodies->y[j] - bodies->y[i];
-      const float dz = bodies->z[j] - bodies->z[i];
-      const float drSquared  = dx*dx + dy*dy + dz*dz + softening;
-      const float drRooted = sqrtf(drSquared);
-      const float drPower32 = drRooted * drSquared;
-      const float drPower23 = 1.0f / drPower32;
-	
-      // Calculate the net force
-      Fx += dx * drPower23;  
-      Fy += dy * drPower23;  
-      Fz += dz * drPower23;
-    }
+  for (int i = 0; i < nBodies; i += TILE_SZ) {
+    float Fx[TILE_SZ], Fy[TILE_SZ], Fz[TILE_SZ];
+    Fx[:] = Fy[:] = Fz[:] = .0;
 
+    #pragma unroll_and_jam(TILE_SZ)
+    #pragma omp simd
+    // Loop over bodies that exert force: vectorization expected here
+    for (int j = 0; j < nBodies; j ++) {
+      for (int k = i; k < i + TILE_SZ; ++ k) {
+        // Newton's law of universal gravity
+        const float dx = bodies->x[j] - bodies->x[k];
+        const float dy = bodies->y[j] - bodies->y[k];
+        const float dz = bodies->z[j] - bodies->z[k];
+        const float drSquared  = dx*dx + dy*dy + dz*dz + softening;
+        const float drRooted = sqrtf(drSquared);
+        const float drPower32 = drRooted * drSquared;
+        // const float drReciRooted = 1.0f / sqrtf(drSquared);  // all expensive operations happened here
+        const float drPower23 = 1.0f / drPower32;
+  	
+        // Calculate the net force
+        Fx[k-i] += dx * drPower23;  
+        Fy[k-i] += dy * drPower23;  
+        Fz[k-i] += dz * drPower23;
+      }
+    }
     // Accelerate bodies in response to the gravitational force
-    bodies->vx[i] += dt * Fx; 
-    bodies->vy[i] += dt * Fy; 
-    bodies->vz[i] += dt * Fz;
+    for (int k = i; k < i + TILE_SZ; ++ k) {
+      bodies->vx[k] += dt * Fx[k-i]; 
+      bodies->vy[k] += dt * Fy[k-i]; 
+      bodies->vz[k] += dt * Fz[k-i];
+    }
   }
   // end of parallel section
   #pragma omp barrier
@@ -77,7 +87,7 @@ Centroid get_centroid(const int nBodies, struct BodySet* const bodies) {
 }
 
 int main(const int argc, const char** argv) {
-  omp_set_num_threads(8);
+  // omp_set_num_threads(8);
   // Problem size and other parameters
   const int nBodies = (argc > 1 ? atoi(argv[1]) : 16384);
   const int nSteps = 10;  // Duration of test
@@ -105,7 +115,7 @@ int main(const int argc, const char** argv) {
   printf("Initial center of mass: (%g, %g, %g)\n", c.x, c.y, c.z);
 
   // Perform benchmark
-  printf("\n\033[1mNBODY Version 03\033[0m\n");
+  printf("\n\033[1mNBODY Version 04\033[0m\n");
   printf("\nPropagating %d bodies using %d thread on %s...\n\n", 
 	 nBodies, omp_get_num_threads(), "CPU");
 
