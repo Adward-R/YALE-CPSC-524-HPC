@@ -4,7 +4,6 @@
 #include <omp.h>
 #include <vector>
 #include <queue>
-#include <list>
 
 #define MAX_LINE_WIDTH 100
 #define INF -1
@@ -31,42 +30,56 @@ void moore(int source, int nNodes, int dist[], vector<AdjListEntry>& adjList) {
     }
     dist[source] = 0;
 
-    list<int> fifo_q;
-    fifo_q.push_back(source);
+    queue<int> fifo_q;
+    fifo_q.push(source);
+    // int max_tnum = 0;
 
     #pragma omp parallel
     #pragma omp single
     {
-        while (fifo_q.size() > 0) {
-            list<int> new_q;
-            list<int>::iterator iter = fifo_q.begin();
-            while (iter != fifo_q.end()) {
-                const int vi = *iter;
-                list<int> local_q;
-
-                #pragma omp task private(local_q)
+        int q_size = 1, nthreads = 0, thread_count = 0;
+        while (q_size > 0 || nthreads > 0) {
+            #pragma omp task
+            {
+//                #pragma omp critical(tnum)
+//                {
+//                    int tn = omp_get_thread_num();
+//                    if (tn > max_tnum) max_tnum = tn;
+//                }
+                int vi;
+                #pragma omp critical(q_update)
                 {
-                    for (int j = 0; j < adjList[vi].neighbors.size(); ++j) {
-                        const AdjListNode &adjNode = adjList[vi].neighbors[j];
-                        const int vj = adjNode.node;
-                        const int new_dist = adjNode.weight + dist[vi];
+                    vi = fifo_q.front();
+                    fifo_q.pop();
+                }
+                #pragma omp critical(thread_update)
+                    thread_count++;
 
-                        if (new_dist < dist[vj] || dist[vj] == INF) {
-                            dist[vj] = new_dist;
-                            if (adjList[vj].neighbors.size() > 0) {
-                                local_q.push_back(vj);
-                            }
+                for (int j = 0; j < adjList[vi].neighbors.size(); ++j) {
+                    const AdjListNode &adjNode = adjList[vi].neighbors[j];
+                    const int vj = adjNode.node;
+                    const int new_dist = adjNode.weight + dist[vi];
+
+                    if (new_dist < dist[vj] || dist[vj] == INF) {
+                        dist[vj] = new_dist;
+                        if (adjList[vj].neighbors.size() > 0) {
+                            #pragma omp critical(q_update)
+                                fifo_q.push(vj);
                         }
                     }
-                    #pragma omp atomic capture
-                    new_q.splice(new_q.end(), local_q);
-                } // end of task
+                }
+                #pragma omp critical(thread_update)
+                    thread_count--;
+            } // end of task generator
 
-                iter++;
-            }
-            fifo_q = new_q;
+            #pragma omp critical(q_update)
+                q_size = fifo_q.size();
+            #pragma omp critical(thread_update)
+                nthreads = thread_count;
         }
-    } // end of single & parallel section
+        // printf("Thread Total Number: %d\n", omp_get_num_threads());
+        // printf("Max Thread Number: %d\n", max_tnum);
+    } // end of single section
 }
 
 
@@ -107,10 +120,9 @@ int main(const int argc, const char** argv) {
     moore(source, nNodes, dist, adjList);
     double tEnd = omp_get_wtime(); // End timing
 
-    for (int i = 1; i < nNodes; i += 1000) {
-        printf("d(%d, %d) = %d\n", source, i, dist[i]);
+    for (int i = 1; i <= nNodes; i += 5000) {
+       printf("d(%d, %d) = %d\n", source, i, dist[i]);
     }
-    printf("d(%d, %d) = %d\n", source, nNodes, dist[nNodes]);
     printf("\nTook %.3lf s to compute.\n", tEnd - tStart);
 
     fclose(fp);
