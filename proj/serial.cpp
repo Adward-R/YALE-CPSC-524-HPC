@@ -27,15 +27,21 @@ public:
 };
 
 void moore(int source, int nNodes, int dist[], vector<AdjListEntry>& adjList) {
-    for (int i = 0; i < nNodes; ++ i) dist[i] = INF;
+    bool in_queue[nNodes + 1];
+    for (int i = 1; i <= nNodes; ++ i) {
+        dist[i] = INF;
+        in_queue[i] = false;
+    }
     dist[source] = 0;
 
     queue<int> fifo_q;
     fifo_q.push(source);
+    in_queue[source] = true;
 
     int vi, vj, new_dist;
     while (fifo_q.size() > 0) {
         vi = fifo_q.front();
+        in_queue[vi] = false;
         fifo_q.pop();
 
         for (int j = 0; j < adjList[vi].neighbors.size(); ++ j) {
@@ -45,7 +51,10 @@ void moore(int source, int nNodes, int dist[], vector<AdjListEntry>& adjList) {
 
             if (new_dist < dist[vj] || dist[vj] == INF) {
                 dist[vj] = new_dist;
-                fifo_q.push(vj);
+                if (!in_queue[vj] && adjList[vj].neighbors.size() > 0) {
+                    fifo_q.push(vj);
+                    in_queue[vj] = true;
+                }
             }
         }
     }
@@ -131,14 +140,14 @@ int main(const int argc, const char** argv) {
     moore(source, nNodes, dist, adjList);
     double tEnd = omp_get_wtime(); // End timing
 
-//    for (int i = 1; i <= nNodes; i += 500) {
-//       printf("d(%d, %d) = %d\n", source, i, dist[i]);
-//    }
-    printf("\nTook %.3lf s to compute.\n", tEnd - tStart);
+    for (int i = 1; i < nNodes; i += 1000) {
+        printf("d(%d, %d) = %d\n", source, i, dist[i]);
+    }
+    printf("d(%d, %d) = %d\n", source, nNodes, dist[nNodes]);
 
-    tStart = omp_get_wtime(); // Start timing
-    dijkstra(source, nNodes, dist, adjList);
-    tEnd = omp_get_wtime(); // End timing
+//    tStart = omp_get_wtime(); // Start timing
+//    dijkstra(source, nNodes, dist, adjList);
+//    tEnd = omp_get_wtime(); // End timing
     printf("\nTook %.3lf s to compute.\n", tEnd - tStart);
 
     fclose(fp);

@@ -52,9 +52,8 @@ void moore(int source, int nNodes, int dist[], vector<AdjListEntry>& adjList) {
                 dist[vj] = new_dist;
                 if (!in_queue[vj] && adjList[vj].neighbors.size() > 0) {
                     in_queue[vj] = true;
-                    #pragma omp critical(qpush)
+                    #pragma omp atomic capture
                     fifo_q.push(vj);
-
                 }
             }
         }
@@ -100,9 +99,10 @@ int main(const int argc, const char** argv) {
     moore(source, nNodes, dist, adjList);
     double tEnd = omp_get_wtime(); // End timing
 
-    for (int i = 1; i <= nNodes; i += 5000) {
+    for (int i = 1; i < nNodes; i += 1000) {
        printf("d(%d, %d) = %d\n", source, i, dist[i]);
     }
+    printf("d(%d, %d) = %d\n", source, nNodes, dist[nNodes]);
     printf("\nTook %.3lf s to compute.\n", tEnd - tStart);
 
     fclose(fp);
